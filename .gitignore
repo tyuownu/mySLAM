@@ -1,4 +1,13 @@
 *.swp
 bin/
 build/
-#*#
+*#
+3rdparty/g2o/bin/
+3rdparty/g2o/build/
+3rdparty/g2o/lib/
+3rdparty/g2o/g2o_src/bin/
+3rdparty/g2o/g2o_src/build/
+3rdparty/g2o/doc/
+3rdparty/g2o/lib/
+
+3rdparty/sophus/build/
