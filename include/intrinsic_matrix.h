@@ -17,7 +17,10 @@ namespace mySLAM
     float ox() const;
     float oy() const;
 
+    void scale(float factor);
+
     Eigen::Matrix3f data;
+
   }
 }
 

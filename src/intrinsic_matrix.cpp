@@ -2,10 +2,7 @@
 
 namespace mySLAM
 {
-  IntrinsicMatrix::IntrinsicMatrix(const IntrinsicMatrix& other)
-  {
-
-  }
+  IntrinsicMatrix::IntrinsicMatrix(const IntrinsicMatrix& other): data(other.data) {}
   IntrinsicMatrix IntrinsicMatrix::create(float fx, float fy, float ox, float oy)
   {
     IntrinsicMatrix result;
@@ -29,5 +26,10 @@ namespace mySLAM
   float IntrinsicMatrix::oy() const
   { return data(1,2); }
 
+  void IntrinsicMatrix::scale(float factor)
+  {
+    data *= factor;
+  }
 
-}
+
+} // end namespace mySLAM
