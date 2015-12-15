@@ -1,0 +1,71 @@
+%YAML:1.0
+## basic
+dataset: /where/is/the/dataset
+## camera
+# default
+# camera_fx     : 525.0
+# camera_fy     : 525.0
+# camera_cx     : 320.0
+# camera_cy     : 240.0
+# camera_factor : 1000.0
+
+# fr1
+camera_fx     : 517.3
+camera_fy     : 516.5
+camera_cx     : 318.6
+camera_cy     : 255.3
+camera_factor : 5000.0
+
+# fr2
+# camera_fx     : 520.9
+# camera_fy     : 521.0
+# camera_cx     : 325.1
+# camera_cy     : 249.7
+# camera_factor : 5000.0
+
+# fr3
+# camera_fx     : 535.4
+# camera_fy     : 539.2
+# camera_cx     : 320.1
+# camera_cy     : 247.6
+# camera_factor : 5000.0
+
+## DenseTracker::Config
+FirstLevel                   : 0
+LastLevel                    : 0
+MaxIterationsPerLevel        : 0
+Precision                    : 0
+UseInitialEstimate           : 0
+UseWeighting                 : 0
+ScaleEstimatorType           : 0
+ScaleEstimatorParam          : 0
+InfluenceFuntionType         : 0
+InfluenceFuntionParam        : 0
+Mu                           : 0
+IntensityDerivativeThreshold : 0
+DepthDerivativeThreshold     : 0
+
+## KeyframeSlamConfig
+# frontend
+MaxTranslationalDistance          : 0
+MaxRotationalDistance             : 0
+MinEntropyRatio                   : 0
+MinEquationSystemConstraintRatio1 : 0
+UseMultiThreading1                : 0
+
+# backend
+MinConstraintDistance                   : 0
+OptimizationIterations                  : 0
+OptimizationUseDenseGraph               : 0
+OptimizationRemoveOutliers              : 0
+OptimizationOutlierWeightThreshold      : 0
+FinalOptimizationRemoveOutliers         : 0
+FinalOptimizationOutlierWeightThreshold : 0
+FinalOptimizationIterations             : 0
+FinalOptimizationUseDenseGraph          : 0
+NewConstraintSearchRadius               : 0
+NewConstraintMinEntropyRatioCoarse      : 0
+NewConstraintMinEntropyRatioFine        : 0
+UseRobustKernel                         : 0
+MinEquationSystemConstraintRatio2       : 0
+UseMultiThreading2                      : 0

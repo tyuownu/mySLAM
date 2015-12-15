@@ -12,7 +12,7 @@ namespace mySLAM
     int idx = 0;
 
     for(size_t y = 0; y < height_; ++y)
-      for(size_t x = 0; x < width_; ++x, ++id)
+      for(size_t x = 0; x < width_; ++x, ++idx)
       {
         pointcloud_template_(0, idx) = (x - intrinsics_.ox()) / intrinsics_.fx();
         pointcloud_template_(1, idx) = (y - intrinsics_.oy()) / intrinsics_.fy();
@@ -22,8 +22,19 @@ namespace mySLAM
   }
   RgbdCamera::~RgbdCamera() {}
 
-  size_t RgbdCamera::width() const;
-  size_t RgbdCamera::height() const;
+  size_t RgbdCamera::width() const
+  {
+    return width_;
+  }
+  size_t RgbdCamera::height() const
+  {
+    return height_;
+  }
+
+  const mySLAM::IntrinsicMatrix& RgbdCamera::intrinsics() const
+  {
+    return intrinsics_;
+  }
 
   RgbdImagePtr RgbdCamera::create(const cv::Mat& intensity,
                                   const cv::Mat& depth) const
@@ -40,7 +51,8 @@ namespace mySLAM
     return boost::make_shared<RgbdImage>(*this);
   }
 
-  void RgbdCamera::buildPointCloud();
+    void RgbdCamera::buildPointCloud(const cv::Mat& depth, PointCloud& pointcloud) const
+    {}
   // end RgbdCamera class
 
   // begin RgbdCameraPyramid class
@@ -95,24 +107,75 @@ namespace mySLAM
     width(0),
     height(0)
   {}
+  RgbdImage::~RgbdImage()
+  {}
+
+  const RgbdCamera& RgbdImage::camera() const {}
+
+  void RgbdImage::initialize()
+  {
+    assert(hasIntensity() || hasDepth());
+    if(hasIntensity() && hasDepth())
+    {
+      assert(intensity.size() == depth.size());
+    }
+
+    if(hasIntensity())
+    {
+      assert(intensity.type() ==
+             cv::DataType<IntensityType>::type &&
+             depth.channels() == 1);
+      width  = intensity.cols;
+      height = intensity.rows;
+    }
+
+    if(hasDepth())
+    {
+      assert(depth.type() == cv::DataType<DepthType>::type && depth.channels() == 1);
+      width  = depth.cols;
+      height = depth.rows;
+    }
+
+    intensity_requires_calculation_ = true;
+    depth_requires_calculation_     = true;
+    pointcloud_requires_build_      = true;
+  }
+
+  bool RgbdImage::hasIntensity() const
+  {
+    return !intensity.empty();
+  }
+
+  bool RgbdImage::hasRgb() const
+  {}
+
+  bool RgbdImage::hasDepth() const
+  {
+    return !depth.empty();
+  }
+
   // end RgbdImage class
 
   // begin RgbdImagePyramid class
   RgbdImagePyramid::RgbdImagePyramid(RgbdCameraPyramid& camera,
                                      const cv::Mat& intensity,
-                                     const cv::Mat& depth)
+                                     const cv::Mat& depth) :
+    camera_(camera)
   {
     levels_.push_back(camera_.level(0).create(intensity, depth));
   }
   RgbdImagePyramid::~RgbdImagePyramid()
   {}
 
-  void RgbdImagePyramid::compute(const size_t num_levels);
-  void RgbdImagePyramid::build(const size_t num_levels);
+  void RgbdImagePyramid::compute(const size_t num_levels)
+  {}
+  void RgbdImagePyramid::build(const size_t num_levels)
+  {}
 
-  RgbdImage& level(size_t idx)
+  RgbdImage& RgbdImagePyramid::level(size_t idx)
   {
-
+    assert(idx < levels_.size());
+    return *levels_[idx];
   }
   // end RgbdImagePyramid class
 

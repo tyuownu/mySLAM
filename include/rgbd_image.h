@@ -2,11 +2,14 @@
 #define _RGBD_IMAGE_H_
 
 #include <opencv2/opencv.hpp>
-#include <Eigen/Geometry>
 #include <Eigen/StdVector>
+#include <Eigen/Geometry>
+
+#include <boost/make_shared.hpp>
 #include <boost/smart_ptr.hpp>
 
 #include <intrinsic_matrix.h>
+#include <data_types.h>
 
 namespace mySLAM
 {
@@ -168,10 +171,10 @@ namespace mySLAM
                        const IntrinsicMatrix& intrinsics,
                        RgbdImage& result, PointCloud& transformed_pointcloud);
     // SSE version without warped pointcloud, what is that?
-    void warpIntensity(const AffineTransform& transformation,
+    void warpIntensitySSE(const AffineTransform& transformation,
                        const PointCloud& reference_pointcloud,
                        const IntrinsicMatrix& intrinsics,
-                       RgbdImage& result, PointCloud& transformed_pointcloud);
+                       RgbdImage& result);
 
     void warpIntensityForward(const AffineTransform& transformation,
                               const IntrinsicMatrix& intrinsics,

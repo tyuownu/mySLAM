@@ -11,7 +11,7 @@ namespace mySLAM
     IntrinsicMatrix() {}
     IntrinsicMatrix(const IntrinsicMatrix& other);
 
-    IntrinsicMatrix create(float fx, float fy, float ox, float oy);
+    static IntrinsicMatrix create(float fx, float fy, float ox, float oy);
     float fx() const;
     float fy() const;
     float ox() const;
@@ -21,7 +21,7 @@ namespace mySLAM
 
     Eigen::Matrix3f data;
 
-  }
+  };
 }
 
 #endif
