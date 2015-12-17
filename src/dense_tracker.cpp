@@ -26,11 +26,29 @@ namespace mySLAM
   {
     return FirstLevel + 1;
   }
-  // end DenseTracker::Config
+
+  bool DenseTracker::Config::UseEstimateSmoothing() const
+  {
+    return Mu > 1e-6;
+  }
+
+  bool DenseTracker::Config::IsSane() const
+  {
+    return FirstLevel >= LastLevel;
+  }
+  // end DenseTracker::Config function
+
+  // begin DenseTracker function
   const DenseTracker::Config& DenseTracker::getDefaultConfig()
   {
     static Config defaultConfig;
     return defaultConfig;
   }
+
+  void DenseTracker::configure(const Config& config)
+  {
+    assert(config.IsSane());
+  }
+  // end DenseTracker function
 
 }

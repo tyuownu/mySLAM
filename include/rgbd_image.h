@@ -2,8 +2,8 @@
 #define _RGBD_IMAGE_H_
 
 #include <opencv2/opencv.hpp>
-#include <Eigen/StdVector>
 #include <Eigen/Geometry>
+#include <Eigen/StdVector>
 
 #include <boost/make_shared.hpp>
 #include <boost/smart_ptr.hpp>
