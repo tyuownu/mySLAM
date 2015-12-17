@@ -2,7 +2,7 @@
 #define _LOCAL_MAP_H
 
 #include <rgbd_image.h>
-#include <g2o/core/sparse_optimizer.h>
+/* #include <g2o/core/sparse_optimizer.h> */
 
 namespace mySLAM
 {
@@ -24,9 +24,9 @@ namespace mySLAM
     void getCurrentFramePose(mySLAM::AffineTransformd& current_pose);
     mySLAM::AffineTransformd getCurrentFramePose();
 
-    g2o::SparseOptimizer& getGraph();
-    void setEvaluation(mySLAM::TrackingResultEvaluation::ConstPtr& evaluation);
-    mySLAM::TrackingResultEvaluation::ConstPtr getEvaluation();
+    /* g2o::SparseOptimizer& getGraph(); */
+    /* void setEvaluation(mySLAM::TrackingResultEvaluation::ConstPtr& evaluation); */
+    /* mySLAM::TrackingResultEvaluation::ConstPtr getEvaluation(); */
     void addFrame(const mySLAM::RgbdImagePyramid::Ptr& frame);
     void addOdometryMeasurement(const mySLAM::AffineTransformd& pose, const mySLAM::Matrix6d& information);
     void addKeyframeMeasurement(const mySLAM::AffineTransformd& pose, const mySLAM::Matrix6d& information);

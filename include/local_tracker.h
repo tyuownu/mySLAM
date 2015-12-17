@@ -3,6 +3,7 @@
 
 #include <rgbd_image.h>
 #include <local_map.h>
+#include <dense_tracker.h>
 
 #include <boost/scoped_ptr.hpp>
 #include <boost/signals2.hpp>
@@ -10,6 +11,8 @@
 namespace mySLAM
 {
   struct LocalTrackerImpl;
+  // typedef boost::shared_ptr<mySLAM::PointSelection> PointSelectionPtr;
+  typedef boost::shared_ptr<mySLAM::DenseTracker> DenseTrackerPtr;
 
   class LocalTracker
   {
@@ -41,18 +44,18 @@ namespace mySLAM
   {
     friend class LocalTracker;
     DenseTrackerPtr keyframe_tracker_, odometry_tracker_;
-    mySLAM::ValidPointAndGradientThresholdPredicate predicate;
+    /* mySLAM::ValidPointAndGradientThresholdPredicate predicate; */
     mySLAM::AffineTransformd last_keyframe_pose_;
-    PointSelectionPtr keyframe_points_, active_frame_points_;
+    /* PointSelectionPtr keyframe_points_, active_frame_points_; */
 
     bool force_;
-    static void match(const DenseTrackerPtr& tracker,
-                      const PointSelectionPtr& ref,
-                      const mySLAM::RgbdImagePyramid::Ptr& cur,
-                      LocalTracker::TrackingResult* r)
-    {
-      tracker->match(*ref, *cur, *r);
-    }
+    /* static void match(const DenseTrackerPtr& tracker, */
+    /*                   const PointSelectionPtr& ref, */
+    /*                   const mySLAM::RgbdImagePyramid::Ptr& cur, */
+    /*                   LocalTracker::TrackingResult* r) */
+    /* { */
+    /*   tracker->match(*ref, *cur, *r); */
+    /* } */
   };
 
 }  // end namespace mySLAM

@@ -7,8 +7,9 @@ set(LIBRARY_OUTPUT_PATH    ${PROJECT_SOURCE_DIR}/lib)
 include_directories(${PROJECT_SOURCE_DIR}/include)
 include_directories(${PROJECT_SOURCE_DIR}/3rdparty)
 
+
 # Eigen3 library
-find_package(Eigen3 REQUIRED)
+find_package(Eigen REQUIRED)
 include_directories(${Eigen_INCLUDE_DIRS})
 message("${Eigen_INCLUDE_DIRS}")
 

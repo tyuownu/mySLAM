@@ -3,6 +3,9 @@ add_executable(slam slam.cpp
   rgbd_image.cpp
   dense_tracker.cpp
   param_reader.cpp
+  keyframe_graph.cpp
+  keyframe_tracker.cpp
+  local_tracker.cpp
   )
 
 # OpenCV library

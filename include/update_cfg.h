@@ -58,42 +58,5 @@ bool updateKeyframeConfig(mySLAM::KeyframeTrackerConfig frontend_cfg,
   backend_cfg.MinConstraintDistance                   = atoi( g_pParamReader->getPara("MinConstraintDistance").c_str() );
 }
 
-namespace mySLAM
-{
-  struct KeyframeTrackerConfig
-  {
-    bool UseMultiThreading;
-    double MaxTranslationalDistance;
-    double MaxRotationalDistance;
-    double MinEntropyRatio;
-    double MinEquationSystemConstraintRatio;
-    KeyframeTrackerConfig();
-  };
-
-  struct KeyframeGraphConfig
-  {
-    bool UseRobustKernel;
-    bool UseMultiThreading;
-
-    double NewConstraintSearchRadius;
-    double NewConstraintMinEntropyRatioCoarse;
-    double NewConstraintMinEntropyRatioFine;
-    double MinEquationSystemConstraintRatio;
-
-    bool OptimizationUseDenseGraph;
-    bool OptimizationRemoveOutliers;
-    double OptimizationOutlierWeightThreshold;
-    size_t OptimizationIterations;
-
-    bool FinalOptimizationUseDenseGraph;
-    bool FinalOptimizationRemoveOutliers;
-    double FinalOptimizationOutlierWeightThreshold;
-    size_t FinalOptimizationIterations;
-
-    size_t MinConstraintDistance;
-
-    KeyframeGraphConfig();
-  };
-}  // end namespace mySLAM
 
 #endif

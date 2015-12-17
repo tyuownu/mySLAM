@@ -2,8 +2,10 @@
 #include <rgbd_pair.h>
 #include <rgbd_image.h>
 #include <intrinsic_matrix.h>
-#include <Eigen/Geometry>
 #include <update_cfg.h>
+#include <keyframe_tracker.h>
+
+#include <Eigen/Geometry>
 
 mySLAM::RgbdImagePyramidPtr load( mySLAM::RgbdCameraPyramid& camera,
                                   std::string rgb_file, std::string depth_file )
@@ -66,19 +68,19 @@ void run()
   mySLAM::DenseTracker::Config cfg = mySLAM::DenseTracker::getDefaultConfig();
   updateDenseTrackerConfig(cfg);
 
-  mySLAM::KeyframeTrackerConfig frontend_cfg;
-  mySLAM::KeyframeGraphConfig backend_cfg;
-  updateKeyframeConfig(frontend_cfg, backend_cfg);
+  // mySLAM::KeyframeTrackerConfig frontend_cfg;
+  // mySLAM::KeyframeGraphConfig backend_cfg;
+  // updateKeyframeConfig(frontend_cfg, backend_cfg);
 
-  camera.build(cfg.getNumLevels());
+  // camera.build(cfg.getNumLevels());
 
-  mySLAM::KeyframeTracker keyframe_tracker();
-  keyframe_tracker.configureTracking(cfg);
+  // mySLAM::KeyframeTracker keyframe_tracker;
+  // keyframe_tracker.configureTracking(cfg);
   // keyframe_tracker.configureKeyframeSelection(frontend_cfg);
   // keyframe_tracker.configureMapping(backend_cfg);
   // initialize first pose
-  Eigen::Affine3d trajectory, relative;
-  trajectory.setIdentity();
+  // Eigen::Affine3d trajectory, relative;
+  // trajectory.setIdentity();
   // keyframe_tracker.init(trajectory);
 
   mySLAM::RgbdImagePyramidPtr current;

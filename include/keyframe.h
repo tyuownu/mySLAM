@@ -12,7 +12,7 @@ namespace mySLAM
   class Keyframe
   {
   public:
-    Keyframe() : id_(-1)
+    Keyframe() : id_(-1) {}
     virtual ~Keyframe() {}
 
   protected:

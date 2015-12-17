@@ -2,6 +2,10 @@
 #define _KEYFRAME_TRACKER_H
 
 #include <rgbd_image.h>
+#include <dense_tracker.h>
+#include <keyframe_config.h>
+#include <keyframe_graph.h>
+#include <local_tracker.h>
 namespace mySLAM
 {
   class KeyframeTracker

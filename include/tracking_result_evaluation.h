@@ -2,7 +2,7 @@
 #define _TRACKING_RESULT_EVALUATION_H
 
 #include <boost/shared_ptr.hpp>
-#include <dense_tracking.h>
+#include <dense_tracker.h>
 
 namespace mySLAM
 {
