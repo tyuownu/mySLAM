@@ -2,7 +2,7 @@
 #define _LOCAL_MAP_H
 
 #include <rgbd_image.h>
-/* #include <g2o/core/sparse_optimizer.h> */
+#include <g2o/core/sparse_optimizer.h>
 
 namespace mySLAM
 {
@@ -10,7 +10,6 @@ namespace mySLAM
   class LocalMap
   {
   public:
-    LocalMap();
     virtual ~LocalMap();
 
     typedef boost::shared_ptr<LocalMap> Ptr;

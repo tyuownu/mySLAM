@@ -193,7 +193,7 @@ namespace mySLAM
       depth_requires_calculation_,
       pointcloud_requires_build_;
 
-    const RgbdCameraPyramid& camera_;
+    const RgbdCamera& camera_;
 
     template<typename T>
       void calculateDerivativeX(const cv::Mat& img,

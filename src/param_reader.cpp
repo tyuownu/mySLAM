@@ -150,6 +150,8 @@ std::string ParamReader::getPara( const std::string& para_name )
     return num2string(NewConstraintSearchRadius);
   if ( para_name == std::string("NewConstraintMinEntropyRatioCoarse") )
     return num2string(NewConstraintMinEntropyRatioCoarse);
+  if ( para_name == std::string("NewConstraintMinEntropyRatioFine") )
+    return num2string(NewConstraintMinEntropyRatioFine);
   if ( para_name == std::string("UseRobustKernel") )
     return num2string(UseRobustKernel);
   if ( para_name == std::string("MinEquationSystemConstraintRatio2") )

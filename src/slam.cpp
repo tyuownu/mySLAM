@@ -55,7 +55,7 @@ void run()
 
   // default
   //mySLAM::IntrinsicMatrix intrinsics = mySLAM::IntrinsicMatrix::create(525.0f, 525.0f, 320.0f, 240.0f);
-  // fr1
+  // fr1 // TODO: change to read from param.yaml
   mySLAM::IntrinsicMatrix intrinsics = mySLAM::IntrinsicMatrix::create(517.3f, 516.5f, 318.6f, 255.3f);
   // fr2
   //mySLAM::IntrinsicMatrix intrinsics = mySLAM::IntrinsicMatrix::create(520.9f, 521.0f, 325.1f, 249.7f);
@@ -68,20 +68,20 @@ void run()
   mySLAM::DenseTracker::Config cfg = mySLAM::DenseTracker::getDefaultConfig();
   updateDenseTrackerConfig(cfg);
 
-  // mySLAM::KeyframeTrackerConfig frontend_cfg;
-  // mySLAM::KeyframeGraphConfig backend_cfg;
-  // updateKeyframeConfig(frontend_cfg, backend_cfg);
+  mySLAM::KeyframeTrackerConfig frontend_cfg;
+  mySLAM::KeyframeGraphConfig backend_cfg;
+  updateKeyframeConfig(frontend_cfg, backend_cfg);
 
-  // camera.build(cfg.getNumLevels());
+  camera.build(cfg.getNumLevels());
 
-  // mySLAM::KeyframeTracker keyframe_tracker;
-  // keyframe_tracker.configureTracking(cfg);
-  // keyframe_tracker.configureKeyframeSelection(frontend_cfg);
-  // keyframe_tracker.configureMapping(backend_cfg);
+  mySLAM::KeyframeTracker keyframe_tracker;
+  keyframe_tracker.configureTracking(cfg);
+  keyframe_tracker.configureKeyframeSelection(frontend_cfg);
+  keyframe_tracker.configureMapping(backend_cfg);
   // initialize first pose
-  // Eigen::Affine3d trajectory, relative;
-  // trajectory.setIdentity();
-  // keyframe_tracker.init(trajectory);
+  Eigen::Affine3d trajectory, relative;
+  trajectory.setIdentity();
+  keyframe_tracker.init(trajectory);
 
   mySLAM::RgbdImagePyramidPtr current;
 
@@ -92,8 +92,10 @@ void run()
 
     if (pairs.end() - it == 1)
     {
-      // TODO, maybe opti
+      // TODO, maybe final optimization.
     }
+
+    keyframe_tracker.update(current, trajectory);
 
   }
 }

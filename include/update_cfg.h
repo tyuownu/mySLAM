@@ -51,6 +51,7 @@ bool updateKeyframeConfig(mySLAM::KeyframeTrackerConfig frontend_cfg,
   backend_cfg.OptimizationUseDenseGraph               = ( g_pParamReader->getPara("OptimizationUseDenseGraph") == std::string("yes") )?true:false;
   backend_cfg.OptimizationRemoveOutliers              = ( g_pParamReader->getPara("OptimizationRemoveOutliers") == std::string("yes") )?true:false;
   backend_cfg.OptimizationOutlierWeightThreshold      = atof( g_pParamReader->getPara("OptimizationOutlierWeightThreshold").c_str() );
+  backend_cfg.OptimizationIterations                  = atoi( g_pParamReader->getPara("OptimizationIterations").c_str() );
   backend_cfg.FinalOptimizationUseDenseGraph          = ( g_pParamReader->getPara("FinalOptimizationUseDenseGraph") == std::string("yes") )?true:false;
   backend_cfg.FinalOptimizationRemoveOutliers         = ( g_pParamReader->getPara("FinalOptimizationRemoveOutliers") == std::string("yes") );
   backend_cfg.FinalOptimizationOutlierWeightThreshold = atof( g_pParamReader->getPara("FinalOptimizationOutlierWeightThreshold").c_str() );

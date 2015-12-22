@@ -40,6 +40,7 @@ namespace mySLAM
     KeyframeGraphImpl();
     ~KeyframeGraphImpl();
 
+    void configure(const mySLAM::KeyframeGraphConfig& cfg);
     void configureValidationTracking(const DenseTracker::Config& cfg);
 
   private:
@@ -59,6 +60,12 @@ namespace mySLAM
 
   KeyframeGraphImpl::~KeyframeGraphImpl()
   {}
+
+  void KeyframeGraphImpl::configure(const mySLAM::KeyframeGraphConfig& cfg)
+  {
+    cfg_ = cfg;
+    // constraint_search_.reset(new NearestNeighborConstraintSearch(cfg_.NewConstraintSearchRadius));
+  }
 
   void KeyframeGraphImpl::configureValidationTracking(const DenseTracker::Config& cfg)
   {
@@ -83,12 +90,17 @@ namespace mySLAM
   // end KeyframeGraphImpl function
 
   // begin KeyframeGraph function
-  KeyframeGraph::KeyframeGraph()
+  KeyframeGraph::KeyframeGraph() :
+    impl_(new KeyframeGraphImpl())
   {}
 
   KeyframeGraph::~KeyframeGraph()
   {}
-  void KeyframeGraph::configureValidationTracking(const DenseTracker::Config& cfg)
+  void KeyframeGraph::configure(const mySLAM::KeyframeGraphConfig& config)
+  {
+    impl_->configure(config);
+  }
+  void KeyframeGraph::configureValidationTracking(const mySLAM::DenseTracker::Config& cfg)
   {
     impl_->configureValidationTracking(cfg);
   }

@@ -8,6 +8,8 @@
 #include <data_types.h>
 #include <intrinsic_matrix.h>
 #include <rgbd_image.h>
+#include <point_selection.h>
+#include <math_sse.h>
 // TODO to be adding
 
 namespace mySLAM
@@ -123,9 +125,9 @@ namespace mySLAM
     // bool match(mySLAM::RgbdImagePyramid& reference,
     //            mySLAM::RgbdImagePyramid& current,
     //            mySLAM::DenseTracker::Result& result);
-    // bool match(mySLAM::PointSelection& reference,
-    //            mySLAM::RgbdImagePyramid& current,
-    //            mySLAM::DenseTracker::Result& result);
+    bool match(mySLAM::PointSelection& reference,
+               mySLAM::RgbdImagePyramid& current,
+               mySLAM::DenseTracker::Result& result);
 
     cv::Mat computeIntensityErrorImage(mySLAM::RgbdImagePyramid& reference,
                                        mySLAM::RgbdImagePyramid& current,
@@ -133,7 +135,7 @@ namespace mySLAM
                                        size_t level = 0);
 
     static inline void computeJacobianOfProjectionAndTransformation(const mySLAM::Vector4& p, mySLAM::Matrix2x6& jacobian);
-    static inline void compter3rdRowOfJacobianOfTransformation(const mySLAM::Vector4& p, mySLAM::Vector6& j);
+    static inline void compute3rdRowOfJacobianOfTransformation(const mySLAM::Vector4& p, mySLAM::Vector6& j);
     typedef std::vector<Eigen::Vector2f, Eigen::aligned_allocator<Eigen::Vector2f> > ResidualVectorType;
     typedef std::vector<float> WeightVectorType;
 
@@ -167,6 +169,35 @@ namespace mySLAM
     WeightVectorType weights;
 
   };
+
+  typedef PointWithIntensityAndDepth::VectorType::iterator PointIterator;
+  typedef DenseTracker::ResidualVectorType::iterator ResidualIterator;
+  typedef DenseTracker::WeightVectorType::iterator WeightIterator;
+  typedef std::vector<uint8_t>::iterator ValidFlagIterator;
+
+  struct ComputeResidualsResult
+  {
+    PointIterator first_point_error, last_point_error;
+    ResidualIterator first_residual, last_residual;
+    ValidFlagIterator first_valid_flag, last_valid_flag;
+  };
+
+  void computeResiduals(const PointIterator& first_point,
+                        const PointIterator& last_point,
+                        const RgbdImage& current,
+                        const IntrinsicMatrix& intrinsics,
+                        const Eigen::Affine3f transform,
+                        const Vector8f& reference_weight,
+                        const Vector8f& current_weight,
+                        ComputeResidualsResult& result);
+  void computeResidualsSSE(const PointIterator& first_point,
+                           const PointIterator& last_point,
+                           const RgbdImage& current,
+                           const IntrinsicMatrix& intrinsics,
+                           const Eigen::Affine3f transform,
+                           const Vector8f& reference_weight,
+                           const Vector8f& current_weight,
+                           ComputeResidualsResult& result);
 } // end namespace mySLAM
 
 #endif

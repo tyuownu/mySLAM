@@ -31,34 +31,36 @@ namespace mySLAM
     graph_(),
     lt_()
   {}
+  KeyframeTracker::Impl::~Impl()
+  {}
   void KeyframeTracker::Impl::init(const Eigen::Affine3d& initial_transformation)
   {
     initial_transformation_ = initial_transformation;
     relative_transformation_.setIdentity();
   }
-  // void KeyframeTracker::Impl::update(const mySLAM::RgbdImagePyramid::Ptr& current, Eigen::Affine3d& absolute_transformation)
-  // {
-  //   if(!previous_)
-  //   {
-  //     previous_ = current;
-  //     absolute_transformation = initial_transformation_;
-  //     return ;
-  //   }
+  void KeyframeTracker::Impl::update(const mySLAM::RgbdImagePyramid::Ptr& current, Eigen::Affine3d& absolute_transformation)
+  {
+    if(!previous_)
+    {
+      previous_ = current;
+      absolute_transformation = initial_transformation_;
+      return ;
+    }
 
-  //   if(!lt_.getLocalMap())
-  //   {
-  //     lt_.initNewLocalMap(previous_, current, initial_transformation_);
-  //     lt_.getCurrentPose(absolute_transformation);
-  //     return ;
-  //   }
-  //   lt_.update(current, absolute_transformation);
-  // }
+    if(!lt_.getLocalMap())
+    {
+      lt_.initNewLocalMap(previous_, current, initial_transformation_);
+      lt_.getCurrentPose(absolute_transformation);
+      return ;
+    }
+    lt_.update(current, absolute_transformation);
+  }
   // end KeyframeTracker::Impl function
 
 
   // begin KeyframeTracker function
   KeyframeTracker::KeyframeTracker() :
-    impl_()
+    impl_(new KeyframeTracker::Impl())
   {}
   KeyframeTracker::~KeyframeTracker()
   {}
@@ -66,6 +68,15 @@ namespace mySLAM
   {
     impl_->graph_.configureValidationTracking(cfg);
     impl_->lt_.configure(cfg);
+  }
+
+  void KeyframeTracker::configureKeyframeSelection(const mySLAM::KeyframeTrackerConfig& cfg)
+  {
+    impl_->cfg_ = cfg;
+  }
+  void KeyframeTracker::configureMapping(const mySLAM::KeyframeGraphConfig& cfg)
+  {
+    impl_->graph_.configure(cfg);
   }
   void KeyframeTracker::init( )
   {
@@ -77,10 +88,10 @@ namespace mySLAM
     impl_->init(initial_transformation);
   }
 
-  // void KeyframeTracker::update(const mySLAM::RgbdImagePyramid::Ptr& current, Eigen::Affine3d& absolute_transformation)
-  // {
-  //   impl_->update(current, absolute_transformation);
-  // }
+  void KeyframeTracker::update(const mySLAM::RgbdImagePyramid::Ptr& current, Eigen::Affine3d& absolute_transformation)
+  {
+    impl_->update(current, absolute_transformation);
+  }
 
   // end KeyframeTracker function
 }  // end namespace mySLAM
