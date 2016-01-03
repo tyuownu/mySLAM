@@ -158,7 +158,10 @@ namespace mySLAM
   RgbdImage::~RgbdImage()
   {}
 
-  const RgbdCamera& RgbdImage::camera() const {}
+  const RgbdCamera& RgbdImage::camera() const
+  {
+    return camera_;
+  }
 
   void RgbdImage::initialize()
   {
@@ -260,7 +263,7 @@ namespace mySLAM
   void RgbdImage::buildPointCloud()
   {
     if(!pointcloud_requires_build_) return ;
-    assert(!hasDepth());
+    assert(hasDepth());
     camera_.buildPointCloud(depth, pointcloud);
     pointcloud_requires_build_ = false;
   }
@@ -306,7 +309,7 @@ namespace mySLAM
     {
       levels_.push_back(camera_.level(it).create());
       pyrDownMeanSmooth<IntensityType>(levels_[it - 1]->intensity,
-                                       levels_[it - 1]->intensity);
+                                       levels_[it    ]->intensity);
       pyrDownSubsample<float>(levels_[it - 1]->depth, levels_[it]->depth);
       levels_[it]->initialize();
     }

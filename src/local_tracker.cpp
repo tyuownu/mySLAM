@@ -16,13 +16,17 @@ namespace mySLAM
     PointSelectionPtr keyframe_points_, active_frame_points_;
 
     bool force_;
-    /* static void match(const DenseTrackerPtr& tracker, */
-    /*                   const PointSelectionPtr& ref, */
-    /*                   const mySLAM::RgbdImagePyramid::Ptr& cur, */
-    /*                   LocalTracker::TrackingResult* r) */
-    /* { */
-    /*   tracker->match(*ref, *cur, *r); */
-    /* } */
+
+    LocalTracker::AcceptSignal accept_;
+    LocalTracker::MapInitializedSignal map_initialized_;
+    LocalTracker::MapCompleteSignal map_complete_;
+    static void match(const DenseTrackerPtr& tracker,
+                      const PointSelectionPtr& ref,
+                      const mySLAM::RgbdImagePyramid::Ptr& cur,
+                      LocalTracker::TrackingResult* r)
+    {
+      tracker->match(*ref, *cur, *r);
+    }
   };
 
   // begin LocalTrackerImpl function
@@ -35,6 +39,10 @@ namespace mySLAM
   {
     impl_->keyframe_tracker_.reset(new mySLAM::DenseTracker());
     impl_->odometry_tracker_.reset(new mySLAM::DenseTracker());
+    impl_->last_keyframe_pose_.setIdentity();
+    impl_->force_ = false;
+    impl_->keyframe_points_.reset(new mySLAM::PointSelection(impl_->predicate));
+    impl_->active_frame_points_.reset(new mySLAM::PointSelection(impl_->predicate));
   }
   LocalTracker::~LocalTracker()
   {}
@@ -48,6 +56,17 @@ namespace mySLAM
   {
     local_map_->getCurrentFramePose(pose);
   }
+
+  boost::signals2::connection LocalTracker::addMapInitializedCallback(const MapInitializedCallback& callback)
+  {
+    return impl_->map_initialized_.connect(callback);
+  }
+
+  const mySLAM::DenseTracker::Config& LocalTracker::configuration() const
+  {
+    return impl_->odometry_tracker_->configuration();
+  }
+
   void LocalTracker::configure(const DenseTracker::Config& config)
   {
     impl_->keyframe_tracker_->configure(config);
@@ -84,11 +103,23 @@ namespace mySLAM
     local_map_ = LocalMap::create(keyframe, keyframe_pose);
     local_map_->addFrame(frame);
     local_map_->addKeyframeMeasurement(r_odometry.Transformation, r_odometry.Information);
+    impl_->map_initialized_(*this, local_map_, r_odometry);
   }
 
   void LocalTracker::update(const mySLAM::RgbdImagePyramid::Ptr& image, mySLAM::AffineTransformd& pose)
   {
-    //
+    const mySLAM::DenseTracker::Config& config = impl_->keyframe_tracker_->configuration();
+    image->build(config.getNumLevels());
+
+    for(int id = config.LastLevel; id <= config.FirstLevel; ++id)
+    {
+      image->level(id).buildPointCloud();
+      image->level(id).buildAccelerationStructure();
+    }
+
+    TrackingResult r_odometry, r_keyframe;
+    r_odometry.Transformation.setIdentity();
+    r_keyframe.Transformation = impl_->last_keyframe_pose_.inverse(Eigen::Isometry);
   }
 
   // end LocalTracker function

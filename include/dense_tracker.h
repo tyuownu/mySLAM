@@ -182,22 +182,6 @@ namespace mySLAM
     ValidFlagIterator first_valid_flag, last_valid_flag;
   };
 
-  void computeResiduals(const PointIterator& first_point,
-                        const PointIterator& last_point,
-                        const RgbdImage& current,
-                        const IntrinsicMatrix& intrinsics,
-                        const Eigen::Affine3f transform,
-                        const Vector8f& reference_weight,
-                        const Vector8f& current_weight,
-                        ComputeResidualsResult& result);
-  void computeResidualsSSE(const PointIterator& first_point,
-                           const PointIterator& last_point,
-                           const RgbdImage& current,
-                           const IntrinsicMatrix& intrinsics,
-                           const Eigen::Affine3f transform,
-                           const Vector8f& reference_weight,
-                           const Vector8f& current_weight,
-                           ComputeResidualsResult& result);
 } // end namespace mySLAM
 
 #endif

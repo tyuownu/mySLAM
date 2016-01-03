@@ -97,13 +97,13 @@ namespace mySLAM
 
   void LocalMap::getCurrentFramePose(mySLAM::AffineTransformd& current_pose)
   {
-    // current_pose = getCurrentFramePose();
+    current_pose = getCurrentFramePose();
   }
 
-  // mySLAM::AffineTransformd  LocalMap::getCurrentFramePose()
-  // {
-  //   return toAffine(impl_->current_vertex_->estimate());
-  // }
+  mySLAM::AffineTransformd  LocalMap::getCurrentFramePose()
+  {
+    return toAffine(impl_->current_vertex_->estimate());
+  }
   void LocalMap::addFrame(const mySLAM::RgbdImagePyramid::Ptr& frame)
   {
     impl_->current_ = frame;

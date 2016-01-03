@@ -10,17 +10,40 @@
 
 namespace mySLAM
 {
+  void computeResiduals(const PointIterator& first_point,
+                        const PointIterator& last_point,
+                        const RgbdImage& current,
+                        const IntrinsicMatrix& intrinsics,
+                        const Eigen::Affine3f transform,
+                        const Vector8f& reference_weight,
+                        const Vector8f& current_weight,
+                        ComputeResidualsResult& result);
+  void computeResidualsSSE(const PointIterator& first_point,
+                           const PointIterator& last_point,
+                           const RgbdImage& current,
+                           const IntrinsicMatrix& intrinsics,
+                           const Eigen::Affine3f transform,
+                           const Vector8f& reference_weight,
+                           const Vector8f& current_weight,
+                           ComputeResidualsResult& result);
+
   static inline float computeWeight(const Eigen::Vector2f& r, const Eigen::Vector2f& mean, const Eigen::Matrix2f& precision);
   void computeWeights(const ResidualIterator& first_residual,
                       const ResidualIterator& last_residual,
                       const WeightIterator& first_weight,
                       const Eigen::Vector2f& mean,
                       const Eigen::Matrix2f& precision);
+
   static inline Eigen::Matrix2f computeScale(const float& weight, const Eigen::Vector2f& r, const Eigen::Vector2f* mean);
   Eigen::Matrix2f computeScales(const ResidualIterator& first_residual,
                                 const ResidualIterator& last_residual,
                                 const WeightIterator& first_weight,
                                 const Eigen::Vector2f& mean);
+  Eigen::Matrix2f computeScaleSSE(const ResidualIterator& first_residual,
+                                  const ResidualIterator& last_residual,
+                                  const WeightIterator& first_weight,
+                                  const Eigen::Vector2f& mean);
+
   float computeCompleteDataLogLikelihood(const ResidualIterator& first_residual,
                                          const ResidualIterator& last_residual,
                                          const WeightIterator& first_weight,
@@ -163,9 +186,9 @@ namespace mySLAM
 
       Vector8f wcur, wref;
       float wcur_id = 0.5f, wref_id = 0.5f, wcur_zd = 1.0f, wref_zd = 0.0f;
-      wcur << 1.0f / 255.0f, 1.0f, wcur_id * K.fx() / 255.0f, wcur_id * K.fy() / 255.0f,
+      wcur <<  1.0f / 255.0f,  1.0f, wcur_id * K.fx() / 255.0f, wcur_id * K.fy() / 255.0f,
         wcur_zd * K.fx(), wcur_zd * K.fy(), 0.0f, 0.0f;
-      wref << 1.0f / 255.0f, 1.0f, wref_id * K.fx() / 255.0f, wref_id * K.fy() / 255.0f,
+      wref << -1.0f / 255.0f, -1.0f, wref_id * K.fx() / 255.0f, wref_id * K.fy() / 255.0f,
         wref_zd * K.fx(), wref_zd * K.fy(), 0.0f, 0.0f;
 
       PointSelection::PointIterator first_point, last_point;
@@ -199,9 +222,10 @@ namespace mySLAM
         initial.update() = inc.inverse() * initial();
         estimate.update() = inc * estimate();
         transformf = estimate().matrix().cast<float>();
-        computeResiduals(first_point, last_point, cur, K, transformf, wref, wcur, compute_residuals_result);
+        computeResidualsSSE(first_point, last_point, cur, K, transformf, wref, wcur, compute_residuals_result);
         // TODO: SSE version. and write the function below?
         size_t n = (compute_residuals_result.last_residual - compute_residuals_result.first_residual);
+        std::cout<<"n - "<<n<<std::endl;
         iteration_stats.ValidConstraints = n;
 
         if(n < 6)
@@ -221,7 +245,8 @@ namespace mySLAM
           computeWeights(compute_residuals_result.first_residual, compute_residuals_result.last_residual, weights.begin(), mean, precision);
         }
 
-        precision = computeScales(compute_residuals_result.first_residual, compute_residuals_result.last_residual, weights.begin(), mean).inverse();
+        precision = computeScaleSSE(compute_residuals_result.first_residual, compute_residuals_result.last_residual, weights.begin(), mean).inverse();
+        // std::cout<<precision<<std::endl;
         float ll = computeCompleteDataLogLikelihood(compute_residuals_result.first_residual, compute_residuals_result.last_residual, weights.begin(), mean, precision);
 
         iteration_stats.TDistributionLogLikelihood = -ll;
@@ -267,6 +292,8 @@ namespace mySLAM
         itctx_.Iteration++;
       }
       while(accept && x.lpNorm<Eigen::Infinity>() > cfg.Precision && !itctx_.IterationsExceeded());
+      std::cout<< " A = "<< std::endl << A << std::endl;
+      std::cout<< " b = "<< std::endl << b << std::endl;
 
       if (x.lpNorm<Eigen::Infinity>() <= cfg.Precision)
       {
@@ -383,7 +410,256 @@ namespace mySLAM
     }
   }
 
-  // end DenseTracker function
+  static const __m128 ONES = _mm_set1_ps(1.0f);
+  static const __m128 BLEND_MASK = _mm_cmpgt_ps(_mm_setr_ps(0.0f, 1.0f, 0.0f, 0.0f), _mm_set1_ps(0.5f));
+  static inline float depthStdDevZ(float depth)
+  {
+    float sigma_z = depth - 0.4f;
+    sigma_z = 0.0012f + 0.0019 * sigma_z * sigma_z;
+    // TODO: What this?
+    return sigma_z;
+  }
+
+  void computeResidualsSSE(const PointIterator& first_point, const PointIterator& last_point, const RgbdImage& current, const IntrinsicMatrix& intrinsics, const Eigen::Affine3f transform, const Vector8f& reference_weight, const Vector8f& current_weight, ComputeResidualsResult& result)
+  {
+    result.last_point_error = result.first_point_error;
+    result.last_residual = result.first_residual;
+
+    Eigen::Matrix<float, 3, 3> K;
+    K <<
+        intrinsics.fx(), 0, intrinsics.ox(),
+        0, intrinsics.fy(), intrinsics.oy(),
+        0, 0, 1;
+
+    Eigen::Matrix<float, 3, 4> KT = K * transform.matrix().block<3, 4>(0, 0);
+
+    __m128 kt_r1 = _mm_setr_ps(KT(0, 0), KT(0, 1), KT(0, 2), KT(0, 3));
+    __m128 kt_r2 = _mm_setr_ps(KT(1, 0), KT(1, 1), KT(1, 2), KT(1, 3));
+    __m128 kt_r3 = _mm_setr_ps(KT(2, 0), KT(2, 1), KT(2, 2), KT(2, 3));
+
+    __m128 current_weight_a = _mm_load_ps(current_weight.data());
+    __m128 current_weight_b = _mm_load_ps(current_weight.data() + 4);
+
+    __m128 reference_weight_a = _mm_load_ps(reference_weight.data());
+    __m128 reference_weight_b = _mm_load_ps(reference_weight.data() + 4);
+
+    __m128 lower_bound = _mm_set1_ps(0.0f);
+    __m128 upper_bound = _mm_setr_ps(current.width - 2, current.height - 2, current.width - 2, current.height - 2);
+
+    EIGEN_ALIGN16 int address[4];
+
+    unsigned int rnd_mode = _MM_GET_ROUNDING_MODE();
+
+    if(rnd_mode != _MM_ROUND_TOWARD_ZERO) _MM_SET_ROUNDING_MODE(_MM_ROUND_TOWARD_ZERO);
+
+    const PointIterator lp = ((last_point - first_point) % 2) != 0 ? last_point - 1 : last_point;
+
+    for(PointIterator p_it = first_point; p_it != lp; p_it += 2)
+    {
+      // load points
+      __m128 p1 = _mm_load_ps((p_it + 0)->point.data);
+      __m128 p2 = _mm_load_ps((p_it + 1)->point.data);
+
+      // transform
+      __m128 pt1_x = _mm_mul_ps(kt_r1, p1);
+      __m128 pt2_x = _mm_mul_ps(kt_r1, p2);
+
+      __m128 pt1_y = _mm_mul_ps(kt_r2, p1);
+      __m128 pt2_y = _mm_mul_ps(kt_r2, p2);
+
+      __m128 pt1_z = _mm_mul_ps(kt_r3, p1);
+      __m128 pt2_z = _mm_mul_ps(kt_r3, p2);
+
+      __m128 pt1_xy_pt2_xy = _mm_hadd_ps(_mm_hadd_ps(pt1_x, pt1_y), _mm_hadd_ps(pt2_x, pt2_y));
+      __m128 pt1_zz_pt2_zz = _mm_hadd_ps(_mm_hadd_ps(pt1_z, pt1_z), _mm_hadd_ps(pt2_z, pt2_z));
+
+      // project
+      //__m128 pt1_uv_pt2_uv = _mm_div_ps(pt1_xy_pt2_xy, pt1_zz_pt2_zz);
+      __m128 pt1_uv_pt2_uv = _mm_mul_ps(pt1_xy_pt2_xy, _mm_rcp_ps(pt1_zz_pt2_zz));
+
+      // floor
+      __m128i pt1_uv_pt2_uv_int = _mm_cvtps_epi32(pt1_uv_pt2_uv);
+      __m128 pt1_u0v0_pt2_u0v0 = _mm_cvtepi32_ps(pt1_uv_pt2_uv_int);
+
+      // compute weights
+      __m128 pt1w1_uv_pt2w1_uv = _mm_sub_ps(pt1_uv_pt2_uv, pt1_u0v0_pt2_u0v0);
+      __m128 pt1w0_uv_pt2w0_uv = _mm_sub_ps(ONES, pt1w1_uv_pt2w1_uv);
+
+      // check image bounds
+      int bounds_mask = _mm_movemask_ps(_mm_and_ps(_mm_cmpge_ps(pt1_uv_pt2_uv, lower_bound), _mm_cmple_ps(pt1_uv_pt2_uv, upper_bound)));
+
+      _mm_store_si128((__m128i*) address, pt1_uv_pt2_uv_int);
+
+      if((bounds_mask & 3) == 3)
+      {
+        const float *x0y0_ptr = current.acceleration.ptr<float>(address[1], address[0]);
+        const float *x0y1_ptr = current.acceleration.ptr<float>(address[1] + 1, address[0]);
+
+        _mm_prefetch(x0y1_ptr, _MM_HINT_NTA);
+
+        // shuffle weights
+        __m128 w0_uuvv = _mm_unpacklo_ps(pt1w0_uv_pt2w0_uv, pt1w0_uv_pt2w0_uv);
+        __m128 w0_uuuu = _mm_unpacklo_ps(w0_uuvv, w0_uuvv);
+        __m128 w0_vvvv = _mm_unpackhi_ps(w0_uuvv, w0_uuvv);
+
+        __m128 w1_uuvv = _mm_unpacklo_ps(pt1w1_uv_pt2w1_uv, pt1w1_uv_pt2w1_uv);
+        __m128 w1_uuuu = _mm_unpacklo_ps(w1_uuvv, w1_uuvv);
+        __m128 w1_vvvv = _mm_unpackhi_ps(w1_uuvv, w1_uuvv);
+
+        // interpolate
+        __m128 a1 = _mm_mul_ps(w0_vvvv,
+            _mm_add_ps(
+                _mm_mul_ps(w0_uuuu, _mm_load_ps(x0y0_ptr + 0)),
+                _mm_mul_ps(w1_uuuu, _mm_load_ps(x0y0_ptr + 8))
+            )
+        );
+
+        __m128 b1 = _mm_mul_ps(w0_vvvv,
+            _mm_add_ps(
+                _mm_mul_ps(w0_uuuu, _mm_load_ps(x0y0_ptr + 4)),
+                _mm_mul_ps(w1_uuuu, _mm_load_ps(x0y0_ptr + 12))
+            )
+        );
+
+        __m128 a2 = _mm_mul_ps(w1_vvvv,
+            _mm_add_ps(
+                _mm_mul_ps(w0_uuuu, _mm_load_ps(x0y1_ptr + 0)),
+                _mm_mul_ps(w1_uuuu, _mm_load_ps(x0y1_ptr + 8))
+            )
+        );
+
+        __m128 b2 = _mm_mul_ps(w1_vvvv,
+            _mm_add_ps(
+                _mm_mul_ps(w0_uuuu, _mm_load_ps(x0y1_ptr + 4)),
+                _mm_mul_ps(w1_uuuu, _mm_load_ps(x0y1_ptr + 12))
+            )
+        );
+
+        // first 4 values in interpolated Vec8f
+        __m128 a = _mm_add_ps(a1, a2);
+        // last 4 values in interpolated Vec8f
+        __m128 b = _mm_add_ps(b1, b2);
+
+        // check for NaNs in interpolated Vec8f
+        int nans_mask = _mm_movemask_ps(_mm_cmpunord_ps(a, b));
+
+        if(nans_mask == 0)
+        {
+          _mm_store_ps(result.last_point_error->point.data, p1);
+
+          __m128 reference_a = _mm_load_ps((p_it + 0)->intensity_and_depth.data);
+          // replace the reference image depth value with the transformed one
+          reference_a = _mm_or_ps(_mm_and_ps(BLEND_MASK, pt1_zz_pt2_zz), _mm_andnot_ps(BLEND_MASK, reference_a));
+
+          __m128 residual_a = _mm_add_ps(_mm_mul_ps(current_weight_a, a), _mm_mul_ps(reference_weight_a, reference_a));
+          _mm_store_ps(result.last_point_error->intensity_and_depth.data + 0, residual_a);
+
+          // occlusion test
+          if(result.last_point_error->intensity_and_depth.z > -20.0f * depthStdDevZ((p_it + 0)->intensity_and_depth.z))
+          {
+            _mm_storel_pi((__m64 *)result.last_residual->data(), residual_a);
+
+            __m128 reference_b = _mm_load_ps((p_it + 0)->intensity_and_depth.data + 4);
+            __m128 residual_b = _mm_add_ps(_mm_mul_ps(current_weight_b, b), _mm_mul_ps(reference_weight_b, reference_b));
+            _mm_store_ps(result.last_point_error->intensity_and_depth.data + 4, residual_b);
+
+            ++result.last_point_error;
+            ++result.last_residual;
+          }
+          else
+          {
+            nans_mask = 1;
+          }
+        }
+      }
+
+
+      if((bounds_mask & 12) == 12)
+      {
+        const float *x0y0_ptr = current.acceleration.ptr<float>(address[3], address[2]);
+        const float *x0y1_ptr = current.acceleration.ptr<float>(address[3] + 1, address[2]);
+
+        _mm_prefetch(x0y1_ptr, _MM_HINT_NTA);
+
+        // shuffle weights
+        __m128 w0_uuvv = _mm_unpackhi_ps(pt1w0_uv_pt2w0_uv, pt1w0_uv_pt2w0_uv);
+        __m128 w0_uuuu = _mm_unpacklo_ps(w0_uuvv, w0_uuvv);
+        __m128 w0_vvvv = _mm_unpackhi_ps(w0_uuvv, w0_uuvv);
+
+        __m128 w1_uuvv = _mm_unpackhi_ps(pt1w1_uv_pt2w1_uv, pt1w1_uv_pt2w1_uv);
+        __m128 w1_uuuu = _mm_unpacklo_ps(w1_uuvv, w1_uuvv);
+        __m128 w1_vvvv = _mm_unpackhi_ps(w1_uuvv, w1_uuvv);
+
+        // interpolate
+        __m128 a1 = _mm_mul_ps(w0_vvvv,
+            _mm_add_ps(
+                _mm_mul_ps(w0_uuuu, _mm_load_ps(x0y0_ptr + 0)),
+                _mm_mul_ps(w1_uuuu, _mm_load_ps(x0y0_ptr + 8))
+            )
+        );
+
+        __m128 b1 = _mm_mul_ps(w0_vvvv,
+            _mm_add_ps(
+                _mm_mul_ps(w0_uuuu, _mm_load_ps(x0y0_ptr + 4)),
+                _mm_mul_ps(w1_uuuu, _mm_load_ps(x0y0_ptr + 12))
+            )
+        );
+
+        __m128 a2 = _mm_mul_ps(w1_vvvv,
+            _mm_add_ps(
+                _mm_mul_ps(w0_uuuu, _mm_load_ps(x0y1_ptr + 0)),
+                _mm_mul_ps(w1_uuuu, _mm_load_ps(x0y1_ptr + 8))
+            )
+        );
+
+        __m128 b2 = _mm_mul_ps(w1_vvvv,
+            _mm_add_ps(
+                _mm_mul_ps(w0_uuuu, _mm_load_ps(x0y1_ptr + 4)),
+                _mm_mul_ps(w1_uuuu, _mm_load_ps(x0y1_ptr + 12))
+            )
+        );
+
+        // first 4 values in interpolated Vec8f
+        __m128 a = _mm_add_ps(a1, a2);
+        // last 4 values in interpolated Vec8f
+        __m128 b = _mm_add_ps(b1, b2);
+
+        // check for NaNs in interpolated Vec8f
+        int nans_mask = _mm_movemask_ps(_mm_cmpunord_ps(a, b));
+
+        if(nans_mask == 0)
+        {
+          _mm_store_ps(result.last_point_error->point.data, p2);
+
+          __m128 reference_a = _mm_load_ps((p_it + 1)->intensity_and_depth.data);
+          // replace the reference image depth value with the transformed one
+          reference_a = _mm_or_ps(_mm_and_ps(BLEND_MASK, _mm_unpackhi_ps(pt1_zz_pt2_zz, pt1_zz_pt2_zz)), _mm_andnot_ps(BLEND_MASK, reference_a));
+
+          __m128 residual_a = _mm_add_ps(_mm_mul_ps(current_weight_a, a), _mm_mul_ps(reference_weight_a, reference_a));
+          _mm_store_ps(result.last_point_error->intensity_and_depth.data + 0, residual_a);
+
+            // occlusion test
+          if(result.last_point_error->intensity_and_depth.z > -20.0f * depthStdDevZ((p_it + 1)->intensity_and_depth.z))
+          {
+            _mm_storel_pi((__m64 *)result.last_residual->data(), residual_a);
+
+            __m128 reference_b = _mm_load_ps((p_it + 1)->intensity_and_depth.data + 4);
+            __m128 residual_b = _mm_add_ps(_mm_mul_ps(current_weight_b, b), _mm_mul_ps(reference_weight_b, reference_b));
+            _mm_store_ps(result.last_point_error->intensity_and_depth.data + 4, residual_b);
+
+            ++result.last_point_error;
+            ++result.last_residual;
+          }
+          else
+          {
+            nans_mask = 1;
+          }
+        }
+      }
+    }
+
+    if(rnd_mode != _MM_ROUND_TOWARD_ZERO) _MM_SET_ROUNDING_MODE(rnd_mode);
+  }
 
   static inline float computeWeight(const Eigen::Vector2f& r, const Eigen::Vector2f& mean, const Eigen::Matrix2f& precision)
   {
@@ -428,6 +704,56 @@ namespace mySLAM
     }
     return covariance;
   }
+  Eigen::Matrix2f computeScaleSSE(const ResidualIterator& first_residual, const ResidualIterator& last_residual, const WeightIterator& first_weight, const Eigen::Vector2f& mean)
+  {
+    const ResidualIterator lr = last_residual - ((last_residual - first_residual) % 2);
+
+    WeightIterator w_it = first_weight;
+    size_t n = (last_residual - first_residual);
+    float scale = 1.0f / (n - 2 -1);
+
+    __m128 cov_acc = _mm_setzero_ps();
+    __m128 s = _mm_set1_ps(scale);
+    __m128 mean2 = _mm_setr_ps(mean(0), mean(1), mean(0), mean(1));
+
+    __m128 fac1, fac2, w;
+    for(ResidualIterator err_it = first_residual;err_it != lr; err_it += 2, w_it += 2)
+    {
+      __m128 r1r2 = _mm_load_ps(err_it->data());
+      __m128 diff_r1r2 = _mm_sub_ps(r1r2, mean2); // [x1, y1, x2, y2]
+
+      fac1 = _mm_movelh_ps(diff_r1r2, diff_r1r2); // [x1, y1, x1, y1]
+      fac2 = _mm_unpacklo_ps(diff_r1r2, diff_r1r2); // [x1, x1, y1, y1]
+      w = _mm_set1_ps(*(w_it + 0));
+
+      __m128 p1 = _mm_mul_ps(s, _mm_mul_ps(w, _mm_mul_ps(fac1, fac2)));
+
+      fac1 = _mm_movelh_ps(diff_r1r2, diff_r1r2); // [x2, y2, x2, y2]
+      fac2 = _mm_unpacklo_ps(diff_r1r2, diff_r1r2); // [x2, x2, y2, y2]
+      w = _mm_set1_ps(*(w_it + 1));
+
+      __m128 p2 = _mm_mul_ps(s, _mm_mul_ps(w, _mm_mul_ps(fac1, fac2)));
+
+      cov_acc = _mm_add_ps(cov_acc, _mm_add_ps(p1, p2));
+    }
+
+    EIGEN_ALIGN16 float tmp[4];
+    _mm_store_ps(tmp, cov_acc);
+
+    Eigen::Matrix2f covariance;
+    covariance(0, 0) = tmp[0];
+    covariance(0, 1) = tmp[1];
+    covariance(1, 0) = tmp[1];
+    covariance(1, 1) = tmp[3];
+
+    for(ResidualIterator err_it = lr;err_it != last_residual; ++err_it, ++w_it)
+    {
+      covariance += scale * computeScale(*w_it, *err_it, mean);
+    }
+
+    return covariance;
+  }
+
 
   float computeCompleteDataLogLikelihood(const ResidualIterator& first_residual,
                                          const ResidualIterator& last_residual,

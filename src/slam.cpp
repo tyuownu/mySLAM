@@ -30,13 +30,13 @@ mySLAM::RgbdImagePyramidPtr load( mySLAM::RgbdCameraPyramid& camera,
   {
     mySLAM::ConvertRawDepthImage::convert(depth, depth_float, 1.0f /5000.0f);
   }
-  cv::namedWindow( "grey", CV_WINDOW_AUTOSIZE);
-  cv::namedWindow( "depth", CV_WINDOW_AUTOSIZE);
+  // cv::namedWindow( "grey", CV_WINDOW_AUTOSIZE);
+  // cv::namedWindow( "depth", CV_WINDOW_AUTOSIZE);
 
-  cv::imshow("grey", grey);
-  cv::imshow("depth", depth_float);
+  // cv::imshow("grey", grey);
+  // cv::imshow("depth", depth_float);
 
-  cv::waitKey(0);
+  // cv::waitKey(0);
 
   mySLAM::RgbdImagePyramidPtr result = camera.create(grey_s16, depth_float);
 
@@ -96,6 +96,7 @@ void run()
     }
 
     keyframe_tracker.update(current, trajectory);
+    std::cout<<"temp"<<std::endl;
 
   }
 }

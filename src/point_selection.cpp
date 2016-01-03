@@ -20,7 +20,7 @@ namespace mySLAM
 
   void PointSelection::setRgbdImagePyramid(mySLAM::RgbdImagePyramid& pyramid)
   {
-    pyramid_ = & pyramid;
+    pyramid_ = &pyramid;
     for (size_t id = 0; id < storage_.size(); ++id)
     {
       storage_[id].is_cached = false;
